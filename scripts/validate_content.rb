@@ -1,12 +1,15 @@
 #!/usr/bin/env ruby
 
 require "date"
+require "open3"
 require "optparse"
 require "yaml"
 
 SITE_KEYS = %w[owner seo navigation hero sections footer contact].freeze
 WORK_KEYS = %w[title category image alt description location order featured visible].freeze
 WORK_CATEGORIES = %w[photography painting].freeze
+SUPPORTED_IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
+MAX_IMAGE_BYTES = 15 * 1024 * 1024
 
 def load_yaml(path)
   YAML.safe_load(
@@ -83,6 +86,61 @@ def validate_works(works)
   errors
 end
 
+def validate_work_images(works, repo_root:, sanitizer: File.join(__dir__, "sanitize_media.py"))
+  errors = []
+  references = Hash.new { |hash, key| hash[key] = [] }
+  root = File.expand_path(repo_root)
+
+  works.each do |work|
+    source = work.fetch("_path", "work")
+    image = work["image"]
+    next unless image.is_a?(String) && !image.strip.empty?
+
+    extension = File.extname(image).downcase
+    unless SUPPORTED_IMAGE_EXTENSIONS.include?(extension)
+      errors << "#{source}: image has unsupported extension: #{image}"
+      next
+    end
+
+    path = File.expand_path(image.sub(%r{\A/}, ""), root)
+    unless path == root || path.start_with?(root + File::SEPARATOR)
+      errors << "#{source}: image must stay inside the repository: #{image}"
+      next
+    end
+    unless File.file?(path)
+      errors << "#{source}: image file does not exist: #{image}"
+      next
+    end
+    if File.size(path) > MAX_IMAGE_BYTES
+      errors << "#{source}: image exceeds 15 MiB: #{image}"
+      next
+    end
+
+    references[path] << work
+  end
+
+  return errors if references.empty?
+
+  stdout, stderr, status = Open3.capture3(
+    ENV.fetch("PYTHON", "python3"),
+    sanitizer,
+    "--check",
+    *references.keys.sort
+  )
+  return errors if status.success?
+
+  reported_paths = (stderr + stdout).lines.map do |line|
+    references.keys.find { |path| line.start_with?(path + ":") }
+  end.compact.uniq
+  reported_paths = references.keys if reported_paths.empty?
+  reported_paths.each do |path|
+    references[path].each do |work|
+      errors << "#{work.fetch('_path', 'work')}: image metadata check failed: #{work['image']}"
+    end
+  end
+  errors
+end
+
 options = {}
 OptionParser.new do |parser|
   parser.on("--site PATH") { |path| options[:site] = path }
@@ -97,7 +155,9 @@ end
 begin
   site = load_yaml(options[:site])
   works = Dir.glob(File.join(options[:works], "*.md")).sort.map { |path| load_work(path) }
-  errors = validate_site(site) + validate_works(works)
+  site_directory = File.dirname(File.expand_path(options[:site]))
+  repo_root = File.basename(site_directory) == "_data" ? File.dirname(site_directory) : Dir.pwd
+  errors = validate_site(site) + validate_works(works) + validate_work_images(works, repo_root: repo_root)
 rescue ArgumentError => error
   errors = [error.message]
 end
