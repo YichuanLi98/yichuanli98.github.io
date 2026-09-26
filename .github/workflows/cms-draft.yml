@@ -1,0 +1,107 @@
+name: CMS draft quality
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: cms-draft-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  content-quality:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the draft branch
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Mark content quality pending
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          HEAD_SHA="$(git rev-parse HEAD)"
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+            -f state=pending \
+            -f context=content-quality \
+            -f description="Validating portfolio draft"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install test dependencies
+        run: |
+          python3 -m pip install -r requirements-dev.txt
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Sanitize uploaded media
+        run: |
+          python3 scripts/sanitize_media.py --write assets/images/works
+          if ! git diff --quiet -- assets/images/works; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add assets/images/works
+            git commit -m "Sanitize uploaded media"
+            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          fi
+
+      - name: Validate structured content
+        run: ruby scripts/validate_content.rb --site _data/site.yml --works _works
+
+      - name: Check media metadata
+        run: python3 scripts/sanitize_media.py --check assets/images/works
+
+      - name: Run unit tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Build Jekyll site
+        run: bundle exec jekyll build --strict_front_matter
+        env:
+          JEKYLL_ENV: production
+
+      - name: Run browser tests
+        run: npm run test:browser
+
+      - name: Report content quality
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          HEAD_SHA="$(git rev-parse HEAD)"
+          if [ "${JOB_STATUS}" = "success" ]; then
+            STATE=success
+            DESCRIPTION="Portfolio draft passed all checks"
+          else
+            STATE=failure
+            DESCRIPTION="Portfolio draft failed quality checks"
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+            -f state="${STATE}" \
+            -f context=content-quality \
+            -f description="${DESCRIPTION}"

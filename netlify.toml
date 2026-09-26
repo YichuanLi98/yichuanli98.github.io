@@ -1,0 +1,10 @@
+[build]
+  command = "bundle exec jekyll build --strict_front_matter"
+  publish = "_site"
+
+[build.environment]
+  JEKYLL_ENV = "production"
+  RUBY_VERSION = "3.2.11"
+
+[context.deploy-preview]
+  command = "bundle exec jekyll build --strict_front_matter"

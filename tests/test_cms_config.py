@@ -7,6 +7,7 @@ import unittest
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 ADMIN_DIR = REPO_ROOT / "admin"
+WORKFLOW_DIR = REPO_ROOT / ".github" / "workflows"
 
 
 def load_yaml(path):
@@ -100,6 +101,59 @@ class CmsConfigTest(unittest.TestCase):
         self.assertIn('CMS.registerPreviewStyle("/admin/preview.css")', preview)
         self.assertIn("entry.getIn", preview)
         self.assertIn("getAsset", preview)
+
+
+class AutomationContractTest(unittest.TestCase):
+    def test_legacy_template_workflows_are_removed(self):
+        for filename in ("bad-pr.yml", "scrape_talks.yml", "jekyll-build.yml"):
+            with self.subTest(workflow=filename):
+                self.assertFalse((WORKFLOW_DIR / filename).exists())
+
+    def test_cms_drafts_are_sanitized_validated_and_reported(self):
+        workflow = (WORKFLOW_DIR / "cms-draft.yml").read_text(encoding="utf-8")
+        for expected in (
+            "pull_request:",
+            "contents: write",
+            "statuses: write",
+            "github.event.pull_request.head.repo.full_name == github.repository",
+            "requirements-dev.txt",
+            "scripts/sanitize_media.py --write",
+            "scripts/validate_content.rb",
+            "python3 -m unittest discover -s tests -v",
+            "bundle exec jekyll build --strict_front_matter",
+            "npm ci",
+            "npx playwright install --with-deps chromium",
+            "npm run test:browser",
+            "Sanitize uploaded media",
+            "git push",
+            "git rev-parse HEAD",
+            "content-quality",
+        ):
+            with self.subTest(contract=expected):
+                self.assertIn(expected, workflow)
+
+    def test_production_quality_is_read_only_on_master_and_manual_runs(self):
+        workflow = (WORKFLOW_DIR / "site-quality.yml").read_text(encoding="utf-8")
+        for expected in (
+            "push:",
+            "master",
+            "workflow_dispatch:",
+            "contents: read",
+            "scripts/sanitize_media.py --check",
+            "scripts/validate_content.rb",
+            "python3 -m unittest discover -s tests -v",
+            "bundle exec jekyll build --strict_front_matter",
+            "npm run test:browser",
+        ):
+            with self.subTest(contract=expected):
+                self.assertIn(expected, workflow)
+        self.assertNotIn("contents: write", workflow)
+
+    def test_netlify_builds_the_strict_jekyll_site(self):
+        config = (REPO_ROOT / "netlify.toml").read_text(encoding="utf-8")
+        self.assertIn('command = "bundle exec jekyll build --strict_front_matter"', config)
+        self.assertIn('publish = "_site"', config)
+        self.assertIn('JEKYLL_ENV = "production"', config)
 
 
 if __name__ == "__main__":
