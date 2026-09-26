@@ -6,7 +6,7 @@ require "optparse"
 require "yaml"
 
 SITE_KEYS = %w[owner seo navigation hero sections footer contact].freeze
-WORK_KEYS = %w[title category image alt description location visible].freeze
+WORK_REQUIRED_KEYS = %w[title category image alt visible].freeze
 WORK_CATEGORIES = %w[photography painting].freeze
 SUPPORTED_IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
@@ -74,7 +74,7 @@ def validate_works(works)
   errors = []
   works.each do |work|
     path = work.fetch("_path", "work")
-    missing = WORK_KEYS.reject { |key| work.key?(key) }
+    missing = WORK_REQUIRED_KEYS.reject { |key| work.key?(key) }
     errors << "#{path}: missing fields: #{missing.join(', ')}" unless missing.empty?
 
     %w[title image alt].each do |field|

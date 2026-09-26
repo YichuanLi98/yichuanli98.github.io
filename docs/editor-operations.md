@@ -22,7 +22,7 @@ Deploy Preview 链接是不列出的随机地址，不需要登录即可打开�
 
 ## 检查与发布
 
-1. Netlify 会在生成预览前清理新上传图片的 EXIF、IPTC、XMP、注释和时间元数据；`content-quality` 会重复验证并把需要清理的文件以 `Sanitize uploaded media` 提交写回同一草稿分支。
+1. 编辑器会在浏览器中重新编码新上传的 JPEG、PNG 和 WebP，在文件进入仓库前清除元数据；Netlify 生成预览时会再次清理，`content-quality` 也会重复验证并把漏网文件以 `Sanitize uploaded media` 提交写回同一草稿分支。
 2. 自动检查同时验证内容结构、媒体引用、Jekyll 构建、桌面/手机布局和灯箱交互。
 3. 只有 `content-quality` 和 Netlify Deploy Preview 均成功，且你已亲自查看预览后，才点击“发布”。发布会合并草稿到 `master`，然后由 GitHub Pages 更新正式站。
 

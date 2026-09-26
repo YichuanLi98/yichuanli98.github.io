@@ -52,6 +52,15 @@ class CmsConfigTest(unittest.TestCase):
         self.assertEqual(self.config["media_folder"], "assets/images/works")
         self.assertEqual(self.config["public_folder"], "/assets/images/works")
 
+    def test_media_uploads_strip_metadata_before_storage(self):
+        self.assertEqual(
+            self.config.get("media_processing"),
+            {
+                "enabled": True,
+                "strip_metadata": True,
+            },
+        )
+
     def test_editor_exposes_site_photography_and_painting(self):
         self.assertEqual(
             set(self.collections),
@@ -117,7 +126,7 @@ class CmsConfigTest(unittest.TestCase):
         shell = (ADMIN_DIR / "index.html").read_text(encoding="utf-8")
         preview = (ADMIN_DIR / "preview.js").read_text(encoding="utf-8")
 
-        self.assertIn("decap-cms@3.8.3", shell)
+        self.assertIn("decap-cms@3.16.3", shell)
         self.assertIn("netlify-identity-widget@1.9.2", shell)
         for name in ("site", "photography", "painting"):
             self.assertIn(f'CMS.registerPreviewTemplate("{name}"', preview)

@@ -1,5 +1,6 @@
 import json
 import pathlib
+import shutil
 import subprocess
 import tempfile
 import textwrap
@@ -118,28 +119,36 @@ class ContentModelTest(unittest.TestCase):
             set(site),
             {"owner", "seo", "navigation", "hero", "sections", "footer", "contact"},
         )
-        self.assertEqual(site["owner"]["name"], "Yichuan Li")
-        self.assertTrue(site["sections"]["painting"]["coming_soon"])
-        self.assertEqual(site["hero"]["featured_work"], "01-paris-sunset")
-        self.assertEqual(
-            site["sections"]["photography"]["work_order"],
-            [
-                "01-paris-sunset",
-                "02-louvre-night",
-                "03-vaudeville-table",
-                "04-gull-by-sea",
-                "05-west-pier",
-                "06-bell-tower",
-                "07-coastal-rooftops",
-                "08-birds-over-sea",
-            ],
-        )
+        self.assertTrue(site["owner"]["name"].strip())
+        self.assertIsInstance(site["sections"]["painting"]["coming_soon"], bool)
+        self.assertTrue(site["hero"]["featured_work"].strip())
+        for category in ("photography", "painting"):
+            work_order = site["sections"][category]["work_order"]
+            self.assertIsInstance(work_order, list)
+            self.assertEqual(len(work_order), len(set(work_order)))
 
-    def test_eight_photographs_have_complete_unique_metadata(self):
+    def test_photographs_have_required_unique_metadata(self):
         works = [load_work(path) for path in sorted(WORKS_DIR.glob("*.md"))]
-        self.assertEqual(len(works), 8)
-        self.assertEqual({work["category"] for work in works}, {"photography"})
-        self.assertTrue(any(work["visible"] for work in works))
+        self.assertGreater(len(works), 0)
+        self.assertTrue(
+            {work["category"] for work in works}.issubset(
+                {"photography", "painting"}
+            )
+        )
+        self.assertTrue(
+            any(
+                work["category"] == "photography" and work["visible"]
+                for work in works
+            )
+        )
+        self.assertEqual(
+            len({work["title"] for work in works}),
+            len(works),
+        )
+        self.assertEqual(
+            len({work["image"] for work in works}),
+            len(works),
+        )
         for work in works:
             self.assertTrue(work["title"].strip())
             self.assertTrue(work["image"].startswith("/assets/images/works/"))
@@ -150,8 +159,6 @@ class ContentModelTest(unittest.TestCase):
                     "category",
                     "image",
                     "alt",
-                    "description",
-                    "location",
                     "visible",
                 }.issubset(work)
             )
@@ -171,10 +178,17 @@ class ContentValidatorTest(unittest.TestCase):
     def run_validator(self, works, site_contents=None):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
-            site = root / "site.yml"
+            site = root / "_data" / "site.yml"
             works_dir = root / "works"
+            image_dir = root / "assets" / "images" / "works"
+            site.parent.mkdir()
             site.write_text(site_contents or site_yaml(), encoding="utf-8")
             works_dir.mkdir()
+            image_dir.mkdir(parents=True)
+            shutil.copyfile(
+                REPO_ROOT / "assets" / "images" / "works" / "photo-01.jpeg",
+                image_dir / "fixture.jpeg",
+            )
             for filename, contents in works.items():
                 (works_dir / filename).write_text(contents, encoding="utf-8")
             return subprocess.run(
@@ -211,6 +225,16 @@ class ContentValidatorTest(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 1)
         self.assertIn("visible photograph", result.stderr)
+
+    def test_optional_description_and_location_may_be_omitted(self):
+        work = work_yaml("One").replace(
+            'description: ""\nlocation: ""\n',
+            "",
+        )
+
+        result = self.run_validator({"one.md": work})
+
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":
