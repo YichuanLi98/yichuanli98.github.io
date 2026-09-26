@@ -125,8 +125,6 @@ image: "/assets/images/works/photo-01.jpeg"
 alt: "Ninth browser fixture work"
 description: ""
 location: ""
-order: 9
-featured: false
 visible: true
 ---
 `,

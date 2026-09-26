@@ -6,7 +6,7 @@ require "optparse"
 require "yaml"
 
 SITE_KEYS = %w[owner seo navigation hero sections footer contact].freeze
-WORK_KEYS = %w[title category image alt description location order featured visible].freeze
+WORK_KEYS = %w[title category image alt description location visible].freeze
 WORK_CATEGORIES = %w[photography painting].freeze
 SUPPORTED_IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
@@ -32,6 +32,7 @@ def load_work(path)
     aliases: true
   ) || {}
   data["_path"] = path
+  data["_slug"] = File.basename(path, File.extname(path))
   data
 rescue Psych::Exception => error
   raise ArgumentError, "#{path}: invalid front matter: #{error.message}"
@@ -45,6 +46,27 @@ def validate_site(data)
 
   missing = SITE_KEYS - data.keys.map(&:to_s)
   errors << "site: missing sections: #{missing.join(', ')}" unless missing.empty?
+
+  featured_work = data.dig("hero", "featured_work") if data["hero"].is_a?(Hash)
+  unless featured_work.is_a?(String) && !featured_work.strip.empty?
+    errors << "site: hero.featured_work must name a photography work"
+  end
+
+  WORK_CATEGORIES.each do |category|
+    section = data.dig("sections", category) if data["sections"].is_a?(Hash)
+    order = section["work_order"] if section.is_a?(Hash)
+    unless order.is_a?(Array)
+      errors << "site: sections.#{category}.work_order must be a list"
+      next
+    end
+
+    invalid = order.reject { |slug| slug.is_a?(String) && !slug.strip.empty? }
+    errors << "site: sections.#{category}.work_order must contain work slugs" unless invalid.empty?
+    duplicates = order.group_by(&:itself).select { |_slug, entries| entries.length > 1 }.keys
+    unless duplicates.empty?
+      errors << "site: sections.#{category}.work_order contains duplicates: #{duplicates.join(', ')}"
+    end
+  end
   errors
 end
 
@@ -63,27 +85,27 @@ def validate_works(works)
     unless WORK_CATEGORIES.include?(work["category"])
       errors << "#{path}: category must be photography or painting"
     end
-    errors << "#{path}: order must be an integer" unless work["order"].is_a?(Integer)
-    errors << "#{path}: featured must be true or false" unless [true, false].include?(work["featured"])
     errors << "#{path}: visible must be true or false" unless [true, false].include?(work["visible"])
-  end
-
-  works.group_by { |work| [work["category"], work["order"]] }.each do |(category, order), entries|
-    next if order.nil? || entries.length == 1
-
-    paths = entries.map { |entry| entry.fetch("_path", "work") }.join(", ")
-    errors << "#{paths}: duplicate order #{order} in #{category}"
   end
 
   visible_photos = works.select { |work| work["category"] == "photography" && work["visible"] == true }
   errors << "works: at least one visible photograph is required" if visible_photos.empty?
 
-  featured_photos = visible_photos.select { |work| work["featured"] == true }
-  if featured_photos.length != 1
-    errors << "works: exactly one visible featured photograph is required (found #{featured_photos.length})"
-  end
-
   errors
+end
+
+def validate_editor_relationships(site, works)
+  return [] unless site.is_a?(Hash)
+
+  featured_slug = site.dig("hero", "featured_work") if site["hero"].is_a?(Hash)
+  return [] unless featured_slug.is_a?(String) && !featured_slug.strip.empty?
+
+  featured_work = works.find { |work| work["_slug"] == featured_slug }
+  if featured_work.nil? || featured_work["category"] != "photography" || featured_work["visible"] != true
+    ["site: hero.featured_work must name a visible photography work: #{featured_slug}"]
+  else
+    []
+  end
 end
 
 def validate_work_images(works, repo_root:, sanitizer: File.join(__dir__, "sanitize_media.py"))
@@ -157,7 +179,9 @@ begin
   works = Dir.glob(File.join(options[:works], "*.md")).sort.map { |path| load_work(path) }
   site_directory = File.dirname(File.expand_path(options[:site]))
   repo_root = File.basename(site_directory) == "_data" ? File.dirname(site_directory) : Dir.pwd
-  errors = validate_site(site) + validate_works(works) + validate_work_images(works, repo_root: repo_root)
+  errors = validate_site(site) + validate_works(works) +
+    validate_editor_relationships(site, works) +
+    validate_work_images(works, repo_root: repo_root)
 rescue ArgumentError => error
   errors = [error.message]
 end

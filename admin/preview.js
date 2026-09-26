@@ -1,5 +1,5 @@
 (function () {
-  const h = React.createElement;
+  const h = window.h;
 
   function value(entry, path, fallback) {
     const result = entry.getIn(["data"].concat(path.split(".")));
@@ -118,7 +118,7 @@
   }
 
   CMS.registerPreviewStyle("/admin/preview.css");
-  CMS.registerPreviewTemplate("site_settings", SiteSettingsPreview);
+  CMS.registerPreviewTemplate("site", SiteSettingsPreview);
   CMS.registerPreviewTemplate("photography", PhotographyPreview);
   CMS.registerPreviewTemplate("painting", PaintingPreview);
 })();

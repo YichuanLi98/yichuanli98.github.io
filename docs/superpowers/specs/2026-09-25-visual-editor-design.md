@@ -82,6 +82,7 @@ Netlify also builds `master` at its own secondary URL because it is connected to
 - Navigation labels
 - Photography section title and introduction
 - Painting section title, introduction, and `coming_soon` switch
+- Featured photography selection and complete photography/painting ordering lists
 - “Coming soon” message
 - Footer text
 - Email and supported social links
@@ -99,11 +100,9 @@ Each work is stored as one Markdown file under `_works/`. The body is optional; 
 - `description`: optional public caption
 - `location`: optional location
 - `date`: optional creation date
-- `order`: integer display order within the category
-- `featured`: whether the work may be used as the hero image
 - `visible`: whether a published work appears on the public site
 
-The filename supplies a stable slug. Entries may be created, renamed, or deleted through the CMS. Validation permits no more than one visible featured work and rejects duplicate order values within a category.
+The filename supplies a stable slug. Entries may be created, renamed, or deleted through the CMS. The singleton site-settings entry selects the featured photography slug and stores each category's complete order, so a reorder or hero switch is one atomic editorial-workflow draft rather than several independent work-entry pull requests. Validation rejects duplicate slugs and requires the selected hero to resolve to a visible photograph.
 
 ### Media
 
@@ -117,8 +116,8 @@ The workflow also enforces a configurable maximum file size. It reports actionab
 
 `index.html` becomes a Jekyll/Liquid template driven by `_data/site.yml` and `site.works`.
 
-- Visible works are grouped by category and sorted by `order`.
-- The hero uses the single visible featured work, with a safe fallback to the first visible photograph.
+- Visible works are grouped by category and rendered in the slug order stored in site settings; newly published works not yet listed are appended deterministically.
+- The hero uses the visible photograph selected in site settings, with a safe fallback to the first visible photograph.
 - The painting “coming soon” presentation remains visible while `coming_soon` is true.
 - When `coming_soon` is false, visible paintings render as a gallery using the same lightbox behavior as photography.
 - The gallery layout remains responsive and does not require editors to choose CSS layout classes.
@@ -136,9 +135,9 @@ The CMS navigation contains:
 4. Painting
 5. Media library
 
-Work forms show structured fields beside a visual preview that uses the current gallery styling. The collection list exposes title, category, date, visibility, featured state, and order so the owner can understand the gallery without opening every entry.
+Work forms show structured fields beside a visual preview that uses the current gallery styling. The collection list exposes title, category, date, and visibility so the owner can understand the gallery without opening every entry.
 
-Ordering uses an explicit numeric field rather than drag-and-drop. This is predictable in Git, easy to validate, and supported by the standard CMS widgets. The CMS warns about, and CI rejects, duplicate order values.
+Ordering and featured selection use relation widgets inside the singleton site-settings entry. Their changes therefore share one Git commit and one preview. CI rejects duplicate order-list slugs or a hero selection that is missing, hidden, or not photography.
 
 ## Validation and Failure Handling
 
@@ -146,7 +145,7 @@ Pull requests run these checks:
 
 - Parse all YAML/front matter.
 - Verify the site-settings schema and required fields.
-- Verify work category, visibility, featured selection, and ordering rules.
+- Verify work category and visibility plus the site-level hero selection and ordering rules.
 - Verify that every referenced image exists and has an allowed media type.
 - Verify required alt text.
 - Sanitize new media and verify that private metadata is absent.

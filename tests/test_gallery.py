@@ -99,29 +99,30 @@ class GallerySiteTest(unittest.TestCase):
         ).replace(
             'description: "Photography and painting by Yichuan Li."',
             'description: "Fixture description rendered from structured content."',
+        ).replace(
+            'featured_work: "01-paris-sunset"',
+            'featured_work: "02-louvre-night"',
+        ).replace(
+            '''    work_order:
+      - "01-paris-sunset"
+      - "02-louvre-night"
+      - "03-vaudeville-table"
+      - "04-gull-by-sea"
+      - "05-west-pier"
+      - "06-bell-tower"
+      - "07-coastal-rooftops"
+      - "08-birds-over-sea"''',
+            '''    work_order:
+      - "08-birds-over-sea"
+      - "02-louvre-night"
+      - "03-vaudeville-table"
+      - "04-gull-by-sea"
+      - "05-west-pier"
+      - "06-bell-tower"
+      - "07-coastal-rooftops"
+      - "01-paris-sunset"''',
         )
         site_data.write_text(site_text, encoding="utf-8")
-
-        first_work = cls.source_dir / "_works/01-paris-sunset.md"
-        first_text = first_work.read_text(encoding="utf-8")
-        first_work.write_text(
-            first_text.replace("order: 1", "order: 8").replace(
-                "featured: true", "featured: false"
-            ),
-            encoding="utf-8",
-        )
-        second_work = cls.source_dir / "_works/02-louvre-night.md"
-        second_text = second_work.read_text(encoding="utf-8")
-        second_work.write_text(
-            second_text.replace("featured: false", "featured: true"),
-            encoding="utf-8",
-        )
-        eighth_work = cls.source_dir / "_works/08-birds-over-sea.md"
-        eighth_text = eighth_work.read_text(encoding="utf-8")
-        eighth_work.write_text(
-            eighth_text.replace("order: 8", "order: 1"),
-            encoding="utf-8",
-        )
 
         (cls.source_dir / "_works/99-hidden.md").write_text(
             """---
@@ -131,8 +132,6 @@ image: "/assets/images/works/hidden-fixture.jpeg"
 alt: "This hidden work must not render"
 description: ""
 location: ""
-order: 99
-featured: false
 visible: false
 ---
 """,
@@ -146,8 +145,6 @@ image: "/assets/images/works/photo-03.jpeg"
 alt: "A painting fixture hidden by the coming soon state"
 description: ""
 location: ""
-order: 1
-featured: false
 visible: true
 ---
 """,

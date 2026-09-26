@@ -76,6 +76,21 @@ class MediaSanitizerTest(unittest.TestCase):
         self.assertEqual(sanitize_media.sanitize_bytes(sanitized, ".jpeg"), sanitized)
         assert_decodes(self, sanitized)
 
+    def test_jpeg_metadata_after_scan_data_is_removed(self):
+        clean = image_bytes("JPEG")
+        end_of_image = clean.rfind(b"\xff\xd9")
+        dirty = (
+            clean[:end_of_image]
+            + jpeg_segment(0xFE, b"comment inserted after entropy-coded scan")
+            + clean[end_of_image:]
+        )
+
+        sanitized = sanitize_media.sanitize_bytes(dirty, ".jpeg")
+
+        self.assertEqual(sanitized, clean)
+        self.assertNotIn(b"comment inserted after entropy-coded scan", sanitized)
+        assert_decodes(self, sanitized)
+
     def test_png_metadata_chunks_are_removed_and_image_chunks_are_preserved(self):
         clean = image_bytes("PNG")
         metadata = b"".join(
@@ -169,8 +184,13 @@ class MediaReferenceValidationTest(unittest.TestCase):
                         "owner: {}",
                         "seo: {}",
                         "navigation: {}",
-                        "hero: {}",
-                        "sections: {}",
+                        "hero:",
+                        "  featured_work: one",
+                        "sections:",
+                        "  photography:",
+                        "    work_order: [one]",
+                        "  painting:",
+                        "    work_order: []",
                         "footer: {}",
                         "contact: {}",
                     )
@@ -186,8 +206,6 @@ class MediaReferenceValidationTest(unittest.TestCase):
                 alt: Test image
                 description: ""
                 location: ""
-                order: 1
-                featured: true
                 visible: true
                 ---
                 """

@@ -44,7 +44,10 @@ def load_work(path):
         return load_yaml(pathlib.Path(handle.name))
 
 
-def site_yaml():
+def site_yaml(featured_work="one", photography_order=None):
+    if photography_order is None:
+        photography_order = ["one", "two"]
+    order_block = "\n".join(f"      - {slug}" for slug in photography_order)
     return textwrap.dedent(
         """
         owner:
@@ -63,17 +66,21 @@ def site_yaml():
           heading_second: Li
           discipline: Photography & Painting
           scroll_label: View the work
+          featured_work: __FEATURED_WORK__
         sections:
           photography:
             eyebrow: 01 / Photography
             heading: Light, distance, and quiet moments.
             note: Eight photographs from an ongoing visual journal.
+            work_order:
+        __ORDER_BLOCK__
           painting:
             eyebrow: 02 / Painting
             heading: The next collection.
             note: Paintings will join the archive soon.
             coming_soon: true
             orbit_text: Painting · Coming soon · Painting · Coming soon ·
+            work_order: []
         footer:
           signature: Yichuan Li
           discipline: Photography & Painting
@@ -82,22 +89,22 @@ def site_yaml():
           email: ""
           social: []
         """
-    ).lstrip()
+    ).lstrip().replace("__FEATURED_WORK__", featured_work).replace(
+        "__ORDER_BLOCK__", order_block
+    )
 
 
-def work_yaml(title, order, *, featured=False, visible=True, image=None):
-    image = image or f"/assets/images/works/{order:02d}.jpeg"
+def work_yaml(title, *, visible=True, image=None, category="photography"):
+    image = image or "/assets/images/works/fixture.jpeg"
     return textwrap.dedent(
         f"""
         ---
         title: {title}
-        category: photography
+        category: {category}
         image: {image}
         alt: Description for {title}
         description: ""
         location: ""
-        order: {order}
-        featured: {str(featured).lower()}
         visible: {str(visible).lower()}
         ---
         """
@@ -113,16 +120,25 @@ class ContentModelTest(unittest.TestCase):
         )
         self.assertEqual(site["owner"]["name"], "Yichuan Li")
         self.assertTrue(site["sections"]["painting"]["coming_soon"])
+        self.assertEqual(site["hero"]["featured_work"], "01-paris-sunset")
+        self.assertEqual(
+            site["sections"]["photography"]["work_order"],
+            [
+                "01-paris-sunset",
+                "02-louvre-night",
+                "03-vaudeville-table",
+                "04-gull-by-sea",
+                "05-west-pier",
+                "06-bell-tower",
+                "07-coastal-rooftops",
+                "08-birds-over-sea",
+            ],
+        )
 
     def test_eight_photographs_have_complete_unique_metadata(self):
         works = [load_work(path) for path in sorted(WORKS_DIR.glob("*.md"))]
         self.assertEqual(len(works), 8)
         self.assertEqual({work["category"] for work in works}, {"photography"})
-        self.assertEqual([work["order"] for work in works], list(range(1, 9)))
-        self.assertEqual(
-            sum(work["featured"] and work["visible"] for work in works),
-            1,
-        )
         self.assertTrue(any(work["visible"] for work in works))
         for work in works:
             self.assertTrue(work["title"].strip())
@@ -136,8 +152,6 @@ class ContentModelTest(unittest.TestCase):
                     "alt",
                     "description",
                     "location",
-                    "order",
-                    "featured",
                     "visible",
                 }.issubset(work)
             )
@@ -149,19 +163,17 @@ class ContentModelTest(unittest.TestCase):
                 "description",
                 "location",
                 "date",
-                "order",
-                "featured",
                 "visible",
             }))
 
 
 class ContentValidatorTest(unittest.TestCase):
-    def run_validator(self, works):
+    def run_validator(self, works, site_contents=None):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
             site = root / "site.yml"
             works_dir = root / "works"
-            site.write_text(site_yaml(), encoding="utf-8")
+            site.write_text(site_contents or site_yaml(), encoding="utf-8")
             works_dir.mkdir()
             for filename, contents in works.items():
                 (works_dir / filename).write_text(contents, encoding="utf-8")
@@ -171,29 +183,31 @@ class ContentValidatorTest(unittest.TestCase):
                 text=True,
             )
 
-    def test_duplicate_order_is_rejected(self):
+    def test_duplicate_site_order_is_rejected(self):
         result = self.run_validator(
             {
-                "one.md": work_yaml("One", 1, featured=True),
-                "two.md": work_yaml("Two", 1),
-            }
+                "one.md": work_yaml("One"),
+                "two.md": work_yaml("Two"),
+            },
+            site_contents=site_yaml(photography_order=["one", "one"]),
         )
         self.assertEqual(result.returncode, 1)
-        self.assertIn("order", result.stderr)
+        self.assertIn("work_order", result.stderr)
 
-    def test_multiple_visible_featured_photographs_are_rejected(self):
+    def test_featured_work_must_name_a_visible_photograph(self):
         result = self.run_validator(
             {
-                "one.md": work_yaml("One", 1, featured=True),
-                "two.md": work_yaml("Two", 2, featured=True),
-            }
+                "one.md": work_yaml("One"),
+                "two.md": work_yaml("Two", visible=False),
+            },
+            site_contents=site_yaml(featured_work="two"),
         )
         self.assertEqual(result.returncode, 1)
-        self.assertIn("featured", result.stderr)
+        self.assertIn("featured_work", result.stderr)
 
     def test_zero_visible_photographs_are_rejected(self):
         result = self.run_validator(
-            {"one.md": work_yaml("One", 1, featured=True, visible=False)}
+            {"one.md": work_yaml("One", visible=False)}
         )
         self.assertEqual(result.returncode, 1)
         self.assertIn("visible photograph", result.stderr)

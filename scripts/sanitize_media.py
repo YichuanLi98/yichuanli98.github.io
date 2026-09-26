@@ -22,7 +22,32 @@ def _sanitize_jpeg(data):
 
     output = bytearray(data[:2])
     offset = 2
+    in_scan = False
+    found_scan = False
     while offset < len(data):
+        if in_scan:
+            marker_start = data.find(b"\xff", offset)
+            if marker_start < 0:
+                raise MediaFormatError("JPEG is missing EOI")
+            output.extend(data[offset:marker_start])
+
+            marker_offset = marker_start
+            while marker_offset < len(data) and data[marker_offset] == 0xFF:
+                marker_offset += 1
+            if marker_offset >= len(data):
+                raise MediaFormatError("truncated JPEG marker in scan data")
+
+            marker = data[marker_offset]
+            marker_end = marker_offset + 1
+            if marker == 0x00 or marker == 0x01 or 0xD0 <= marker <= 0xD7:
+                output.extend(data[marker_start:marker_end])
+                offset = marker_end
+                continue
+
+            in_scan = False
+            offset = marker_start
+            continue
+
         marker_start = offset
         if data[offset] != 0xFF:
             raise MediaFormatError(f"invalid JPEG marker at byte {offset}")
@@ -34,11 +59,10 @@ def _sanitize_jpeg(data):
 
         marker = data[offset]
         offset += 1
-        if marker == 0xDA:
-            output.extend(data[marker_start:])
-            return bytes(output)
         if marker == 0xD9:
-            output.extend(data[marker_start:])
+            if not found_scan:
+                raise MediaFormatError("JPEG is missing scan data")
+            output.extend(data[marker_start:offset])
             return bytes(output)
         if marker == 0x01 or 0xD0 <= marker <= 0xD7:
             output.extend(data[marker_start:offset])
@@ -55,9 +79,12 @@ def _sanitize_jpeg(data):
 
         if marker not in JPEG_STRIPPED_MARKERS:
             output.extend(data[marker_start:segment_end])
+        if marker == 0xDA:
+            found_scan = True
+            in_scan = True
         offset = segment_end
 
-    raise MediaFormatError("JPEG is missing scan data")
+    raise MediaFormatError("JPEG is missing EOI")
 
 
 def _sanitize_png(data):

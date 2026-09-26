@@ -3,9 +3,11 @@ layout: null
 ---
 {% assign site_copy = site.data.site %}
 {% assign visible_works = site.works | where: "visible", true %}
-{% assign photography = visible_works | where: "category", "photography" | sort: "order" %}
-{% assign paintings = visible_works | where: "category", "painting" | sort: "order" %}
-{% assign featured = photography | where: "featured", true | first %}
+{% assign photography = visible_works | where: "category", "photography" %}
+{% assign paintings = visible_works | where: "category", "painting" %}
+{% assign photography_fallback = photography | sort: "title" %}
+{% assign painting_fallback = paintings | sort: "title" %}
+{% assign featured = photography | where: "slug", site_copy.hero.featured_work | first %}
 {% unless featured %}
   {% assign featured = photography | first %}
 {% endunless %}
@@ -66,24 +68,26 @@ layout: null
         </div>
 
         <div class="gallery" data-category="photography" aria-label="Photography works">
-          {% for work in photography %}
-            <button
-              class="gallery-item"
-              type="button"
-              aria-label="Open {{ work.title | escape }} in full screen"
-              data-full="{{ work.image | escape }}"
-              data-alt="{{ work.alt | escape }}"
-              data-title="{{ work.title | escape }}"
-              data-category="{{ work.category | escape }}"
-            >
-              <span class="work-number" aria-hidden="true">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</span>
-              <img
-                class="gallery-image"
-                src="{{ work.image | escape }}"
-                alt="{{ work.alt | escape }}"
-                {% unless forloop.first %}loading="lazy"{% endunless %}
-              >
-            </button>
+          {% assign rendered_photography = "|" %}
+          {% assign photography_index = 0 %}
+          {% for work_slug in site_copy.sections.photography.work_order %}
+            {% assign work = photography | where: "slug", work_slug | first %}
+            {% if work %}
+              {% assign work_token = work.slug | prepend: "|" | append: "|" %}
+              {% unless rendered_photography contains work_token %}
+                {% assign photography_index = photography_index | plus: 1 %}
+                {% include gallery-item.html work=work index=photography_index %}
+                {% assign rendered_photography = rendered_photography | append: work.slug | append: "|" %}
+              {% endunless %}
+            {% endif %}
+          {% endfor %}
+          {% for work in photography_fallback %}
+            {% assign work_token = work.slug | prepend: "|" | append: "|" %}
+            {% unless rendered_photography contains work_token %}
+              {% assign photography_index = photography_index | plus: 1 %}
+              {% include gallery-item.html work=work index=photography_index %}
+              {% assign rendered_photography = rendered_photography | append: work.slug | append: "|" %}
+            {% endunless %}
           {% endfor %}
         </div>
       </section>
@@ -107,19 +111,26 @@ layout: null
             <p class="section-note">{{ site_copy.sections.painting.note | escape }}</p>
           </div>
           <div class="gallery" data-category="painting" aria-label="Painting works">
-            {% for work in paintings %}
-              <button
-                class="gallery-item"
-                type="button"
-                aria-label="Open {{ work.title | escape }} in full screen"
-                data-full="{{ work.image | escape }}"
-                data-alt="{{ work.alt | escape }}"
-                data-title="{{ work.title | escape }}"
-                data-category="{{ work.category | escape }}"
-              >
-                <span class="work-number" aria-hidden="true">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</span>
-                <img class="gallery-image" src="{{ work.image | escape }}" alt="{{ work.alt | escape }}" loading="lazy">
-              </button>
+            {% assign rendered_paintings = "|" %}
+            {% assign painting_index = 0 %}
+            {% for work_slug in site_copy.sections.painting.work_order %}
+              {% assign work = paintings | where: "slug", work_slug | first %}
+              {% if work %}
+                {% assign work_token = work.slug | prepend: "|" | append: "|" %}
+                {% unless rendered_paintings contains work_token %}
+                  {% assign painting_index = painting_index | plus: 1 %}
+                  {% include gallery-item.html work=work index=painting_index %}
+                  {% assign rendered_paintings = rendered_paintings | append: work.slug | append: "|" %}
+                {% endunless %}
+              {% endif %}
+            {% endfor %}
+            {% for work in painting_fallback %}
+              {% assign work_token = work.slug | prepend: "|" | append: "|" %}
+              {% unless rendered_paintings contains work_token %}
+                {% assign painting_index = painting_index | plus: 1 %}
+                {% include gallery-item.html work=work index=painting_index %}
+                {% assign rendered_paintings = rendered_paintings | append: work.slug | append: "|" %}
+              {% endunless %}
             {% endfor %}
           </div>
         </section>

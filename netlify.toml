@@ -1,5 +1,5 @@
 [build]
-  command = "bundle exec jekyll build --strict_front_matter"
+  command = "python3 scripts/sanitize_media.py --write assets/images/works && ruby scripts/validate_content.rb --site _data/site.yml --works _works && bundle exec jekyll build --strict_front_matter"
   publish = "_site"
 
 [build.environment]
@@ -7,4 +7,9 @@
   RUBY_VERSION = "3.2.11"
 
 [context.deploy-preview]
-  command = "bundle exec jekyll build --strict_front_matter"
+  command = "python3 scripts/sanitize_media.py --write assets/images/works && ruby scripts/validate_content.rb --site _data/site.yml --works _works && bundle exec jekyll build --strict_front_matter"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"

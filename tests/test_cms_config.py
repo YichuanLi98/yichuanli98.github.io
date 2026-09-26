@@ -1,4 +1,5 @@
 import json
+import os
 import pathlib
 import subprocess
 import textwrap
@@ -64,6 +65,29 @@ class CmsConfigTest(unittest.TestCase):
             {"owner", "seo", "navigation", "hero", "sections", "footer", "contact"},
         )
 
+        settings_fields = {
+            field["name"]: field for field in settings["files"][0]["fields"]
+        }
+        hero_fields = {
+            field["name"]: field for field in settings_fields["hero"]["fields"]
+        }
+        self.assertEqual(hero_fields["featured_work"]["widget"], "relation")
+        self.assertEqual(hero_fields["featured_work"]["collection"], "photography")
+        self.assertEqual(hero_fields["featured_work"]["value_field"], "{{slug}}")
+
+        section_fields = {
+            field["name"]: field for field in settings_fields["sections"]["fields"]
+        }
+        for name in ("photography", "painting"):
+            category_fields = {
+                field["name"]: field for field in section_fields[name]["fields"]
+            }
+            order = category_fields["work_order"]
+            self.assertEqual(order["widget"], "list")
+            self.assertEqual(order["field"]["widget"], "relation")
+            self.assertEqual(order["field"]["collection"], name)
+            self.assertEqual(order["field"]["value_field"], "{{slug}}")
+
         for name in ("photography", "painting"):
             with self.subTest(collection=name):
                 collection = self.collections[name]
@@ -81,8 +105,6 @@ class CmsConfigTest(unittest.TestCase):
                         "description",
                         "location",
                         "date",
-                        "order",
-                        "featured",
                         "visible",
                     },
                 )
@@ -96,11 +118,40 @@ class CmsConfigTest(unittest.TestCase):
 
         self.assertIn("decap-cms@3.8.3", shell)
         self.assertIn("netlify-identity-widget@1.9.2", shell)
-        for name in ("site_settings", "photography", "painting"):
+        for name in ("site", "photography", "painting"):
             self.assertIn(f'CMS.registerPreviewTemplate("{name}"', preview)
         self.assertIn('CMS.registerPreviewStyle("/admin/preview.css")', preview)
         self.assertIn("entry.getIn", preview)
         self.assertIn("getAsset", preview)
+        self.assertNotIn("React.createElement", preview)
+
+        smoke_test = textwrap.dedent(
+            """
+            const registrations = [];
+            global.window = { h: (...args) => ({ args }) };
+            global.CMS = {
+              registerPreviewStyle: () => {},
+              registerPreviewTemplate: (name, component) => {
+                component({
+                  entry: { getIn: () => undefined },
+                  getAsset: () => ({ toString: () => "" }),
+                });
+                registrations.push(name);
+              },
+            };
+            require(process.argv[1]);
+            if (registrations.join(",") !== "site,photography,painting") {
+              throw new Error(`unexpected preview registrations: ${registrations}`);
+            }
+            """
+        )
+        subprocess.run(
+            ["node", "-e", smoke_test, str(ADMIN_DIR / "preview.js")],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=os.environ,
+        )
 
 
 class AutomationContractTest(unittest.TestCase):
@@ -151,9 +202,25 @@ class AutomationContractTest(unittest.TestCase):
 
     def test_netlify_builds_the_strict_jekyll_site(self):
         config = (REPO_ROOT / "netlify.toml").read_text(encoding="utf-8")
-        self.assertIn('command = "bundle exec jekyll build --strict_front_matter"', config)
+        command = (
+            'command = "python3 scripts/sanitize_media.py --write assets/images/works '
+            "&& ruby scripts/validate_content.rb --site _data/site.yml --works _works "
+            '&& bundle exec jekyll build --strict_front_matter"'
+        )
+        self.assertIn(command, config)
+        self.assertEqual(config.count(command), 2)
         self.assertIn('publish = "_site"', config)
         self.assertIn('JEKYLL_ENV = "production"', config)
+        self.assertIn('for = "/*"', config)
+        self.assertIn('X-Robots-Tag = "noindex, nofollow"', config)
+
+    def test_ruby_dependencies_are_locked_for_local_and_linux_builds(self):
+        lockfile = (REPO_ROOT / "Gemfile.lock").read_text(encoding="utf-8")
+        ignored = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
+        self.assertIn("github-pages (232)", lockfile)
+        self.assertIn("arm64-darwin", lockfile)
+        self.assertIn("x86_64-linux", lockfile)
+        self.assertNotIn("Gemfile.lock", ignored)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-25-visual-editor-design.md`
 
+**Post-review architecture amendment:** Decap editorial workflow creates a separate pull request for each collection entry. To keep hero changes and reordering atomic, the implemented model stores `hero.featured_work` and both category `work_order` slug lists in the singleton `_data/site.yml`; work entries no longer carry `featured` or numeric `order` fields. This amendment supersedes the older per-work ordering language in the task record below.
+
 ## Global Constraints
 
 - Only the GitHub account `YichuanLi98` may edit; Netlify registration is invite-only and GitHub is the only external identity provider.
@@ -24,7 +26,7 @@
 ## Review Focus
 
 - A work referencing a missing or unsupported image must fail validation with the work path and field name; Task 4 adds this test.
-- Duplicate `order` values or more than one visible featured work must fail deterministically; Task 1 adds these tests.
+- Duplicate site-level `work_order` slugs or a missing/hidden/non-photography `featured_work` must fail deterministically; Task 1 adds these tests.
 - Zero visible photographs must produce a clear validation error instead of a broken hero; Task 1 adds this test.
 - JPEG, PNG, and WebP metadata removal must preserve decodable image bytes and be idempotent; Task 4 adds these tests.
 - A gallery with a non-multiple-of-eight item count must remain usable on mobile and in the lightbox; Task 5 adds a nine-item browser fixture test.
@@ -34,7 +36,7 @@
 ## File Structure
 
 - `_data/site.yml`: owner-editable global copy, navigation, links, hero selection, and painting state.
-- `_works/*.md`: one owner-editable work per file with category, image, accessibility, ordering, and visibility fields.
+- `_works/*.md`: one owner-editable work per file with category, image, accessibility, and visibility fields; ordering and hero selection live in the singleton settings file.
 - `index.html`: Liquid renderer for site settings, photography, painting, and lightbox markup.
 - `admin/index.html`: pinned Decap CMS and Netlify Identity shell.
 - `admin/config.yml`: Git Gateway, editorial workflow, media, collections, and Chinese field labels.

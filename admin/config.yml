@@ -55,6 +55,13 @@ collections:
               - { name: heading_second, label: 主标题第二行, widget: string }
               - { name: discipline, label: 创作类型, widget: string }
               - { name: scroll_label, label: 向下引导文字, widget: string }
+              - name: featured_work
+                label: 首屏作品
+                widget: relation
+                collection: photography
+                search_fields: [title]
+                value_field: "{{slug}}"
+                display_fields: [title]
           - name: sections
             label: 作品版块
             widget: object
@@ -66,6 +73,18 @@ collections:
                   - { name: eyebrow, label: 小标题, widget: string }
                   - { name: heading, label: 主标题, widget: string }
                   - { name: note, label: 说明, widget: text }
+                  - name: work_order
+                    label: 作品顺序
+                    widget: list
+                    required: false
+                    field:
+                      name: work
+                      label: 摄影作品
+                      widget: relation
+                      collection: photography
+                      search_fields: [title]
+                      value_field: "{{slug}}"
+                      display_fields: [title]
               - name: painting
                 label: 绘画版块
                 widget: object
@@ -75,6 +94,18 @@ collections:
                   - { name: note, label: 说明, widget: text }
                   - { name: coming_soon, label: 显示“即将上线”, widget: boolean, default: true }
                   - { name: orbit_text, label: 环形文字, widget: string }
+                  - name: work_order
+                    label: 作品顺序
+                    widget: list
+                    required: false
+                    field:
+                      name: work
+                      label: 绘画作品
+                      widget: relation
+                      collection: painting
+                      search_fields: [title]
+                      value_field: "{{slug}}"
+                      display_fields: [title]
           - name: footer
             label: 页脚
             widget: object
@@ -105,8 +136,8 @@ collections:
     format: frontmatter
     extension: md
     identifier_field: title
-    summary: "{{fields.order}} · {{fields.title}}"
-    slug: "{{fields.order}}-{{slug}}"
+    summary: "{{fields.title}}"
+    slug: "{{slug}}"
     filter: { field: category, value: photography }
     editor:
       preview: true
@@ -118,8 +149,6 @@ collections:
       - { name: description, label: 作品说明, widget: text, required: false }
       - { name: location, label: 地点, widget: string, required: false }
       - { name: date, label: 日期, widget: datetime, required: false, format: "YYYY-MM-DD", date_format: "YYYY-MM-DD", time_format: false }
-      - { name: order, label: 排序, widget: number, value_type: int, min: 1 }
-      - { name: featured, label: 设为首屏作品, widget: boolean, default: false }
       - { name: visible, label: 在网站显示, widget: boolean, default: true }
 
   - name: painting
@@ -131,8 +160,8 @@ collections:
     format: frontmatter
     extension: md
     identifier_field: title
-    summary: "{{fields.order}} · {{fields.title}}"
-    slug: "{{fields.order}}-{{slug}}"
+    summary: "{{fields.title}}"
+    slug: "{{slug}}"
     filter: { field: category, value: painting }
     editor:
       preview: true
@@ -144,6 +173,4 @@ collections:
       - { name: description, label: 作品说明, widget: text, required: false }
       - { name: location, label: 地点, widget: string, required: false }
       - { name: date, label: 日期, widget: datetime, required: false, format: "YYYY-MM-DD", date_format: "YYYY-MM-DD", time_format: false }
-      - { name: order, label: 排序, widget: number, value_type: int, min: 1 }
-      - { name: featured, label: 设为首屏作品, widget: boolean, default: false }
       - { name: visible, label: 在网站显示, widget: boolean, default: true }
