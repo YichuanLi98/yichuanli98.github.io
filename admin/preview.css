@@ -1,0 +1,42 @@
+@import url("/assets/css/gallery.css");
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+.cms-site-preview,
+.cms-work-preview {
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+.cms-preview-hero {
+  background:
+    linear-gradient(135deg, rgba(24, 38, 45, 0.94), rgba(168, 74, 49, 0.78)),
+    var(--ink);
+}
+
+.cms-copy-preview {
+  min-height: 36rem;
+}
+
+.cms-work-preview .gallery {
+  margin: 0 auto;
+  max-width: 72rem;
+}
+
+.cms-work-preview .gallery-item {
+  grid-column: 2 / 12;
+}
+
+.cms-missing-image {
+  align-items: center;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--line);
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}

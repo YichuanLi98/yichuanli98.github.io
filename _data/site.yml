@@ -1,0 +1,51 @@
+owner:
+  name: "Yichuan Li"
+  mark_subtitle: "Visual journal"
+
+seo:
+  title: "Yichuan Li — Photography & Painting"
+  description: "Photography and painting by Yichuan Li."
+
+navigation:
+  photography: "Photography"
+  painting: "Painting"
+  soon: "Soon"
+
+hero:
+  eyebrow: "Selected works"
+  heading_first: "Yichuan"
+  heading_second: "Li"
+  discipline: "Photography & Painting"
+  scroll_label: "View the work"
+  featured_work: "01-paris-sunset"
+
+sections:
+  photography:
+    eyebrow: "01 / Photography"
+    heading: "Light, distance, and quiet moments."
+    note: "Eight photographs from an ongoing visual journal."
+    work_order:
+      - "01-paris-sunset"
+      - "02-louvre-night"
+      - "03-vaudeville-table"
+      - "04-gull-by-sea"
+      - "05-west-pier"
+      - "06-bell-tower"
+      - "07-coastal-rooftops"
+      - "08-birds-over-sea"
+  painting:
+    eyebrow: "02 / Painting"
+    heading: "The next collection."
+    note: "Paintings will join the archive soon."
+    coming_soon: true
+    orbit_text: "Painting · Coming soon · Painting · Coming soon ·"
+    work_order: []
+
+footer:
+  signature: "Yichuan Li"
+  discipline: "Photography & Painting"
+  back_to_top: "Back to top ↑"
+
+contact:
+  email: ""
+  social: []

@@ -1,0 +1,17 @@
+<button
+  class="gallery-item"
+  type="button"
+  aria-label="Open {{ include.work.title | escape }} in full screen"
+  data-full="{{ include.work.image | escape }}"
+  data-alt="{{ include.work.alt | escape }}"
+  data-title="{{ include.work.title | escape }}"
+  data-category="{{ include.work.category | escape }}"
+>
+  <span class="work-number" aria-hidden="true">{% if include.index < 10 %}0{% endif %}{{ include.index }}</span>
+  <img
+    class="gallery-image"
+    src="{{ include.work.image | escape }}"
+    alt="{{ include.work.alt | escape }}"
+    {% unless include.index == 1 %}loading="lazy"{% endunless %}
+  >
+</button>
