@@ -96,7 +96,6 @@ def work_yaml(title, order, *, featured=False, visible=True, image=None):
         alt: Description for {title}
         description: ""
         location: ""
-        date:
         order: {order}
         featured: {str(featured).lower()}
         visible: {str(visible).lower()}
@@ -129,8 +128,7 @@ class ContentModelTest(unittest.TestCase):
             self.assertTrue(work["title"].strip())
             self.assertTrue(work["image"].startswith("/assets/images/works/"))
             self.assertTrue(work["alt"].strip())
-            self.assertEqual(
-                set(work),
+            self.assertTrue(
                 {
                     "title",
                     "category",
@@ -138,12 +136,23 @@ class ContentModelTest(unittest.TestCase):
                     "alt",
                     "description",
                     "location",
-                    "date",
                     "order",
                     "featured",
                     "visible",
-                },
+                }.issubset(work)
             )
+            self.assertTrue(set(work).issubset({
+                "title",
+                "category",
+                "image",
+                "alt",
+                "description",
+                "location",
+                "date",
+                "order",
+                "featured",
+                "visible",
+            }))
 
 
 class ContentValidatorTest(unittest.TestCase):

@@ -5,7 +5,6 @@ image: "/assets/images/works/photo-02.jpeg"
 alt: "An illuminated glass pyramid against the night sky"
 description: ""
 location: "Paris, France"
-date:
 order: 2
 featured: false
 visible: true

@@ -5,7 +5,7 @@ require "optparse"
 require "yaml"
 
 SITE_KEYS = %w[owner seo navigation hero sections footer contact].freeze
-WORK_KEYS = %w[title category image alt description location date order featured visible].freeze
+WORK_KEYS = %w[title category image alt description location order featured visible].freeze
 WORK_CATEGORIES = %w[photography painting].freeze
 
 def load_yaml(path)

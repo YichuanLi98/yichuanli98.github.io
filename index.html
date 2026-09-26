@@ -1,23 +1,37 @@
+---
+layout: null
+---
+{% assign site_copy = site.data.site %}
+{% assign visible_works = site.works | where: "visible", true %}
+{% assign photography = visible_works | where: "category", "photography" | sort: "order" %}
+{% assign paintings = visible_works | where: "category", "painting" | sort: "order" %}
+{% assign featured = photography | where: "featured", true | first %}
+{% unless featured %}
+  {% assign featured = photography | first %}
+{% endunless %}
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Photography and painting by Yichuan Li.">
+    <meta name="description" content="{{ site_copy.seo.description | escape }}">
     <meta name="theme-color" content="#151614">
-    <title>Yichuan Li — Photography &amp; Painting</title>
+    <title>{{ site_copy.seo.title | escape }}</title>
     <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/assets/css/gallery.css">
   </head>
   <body>
     <header class="site-header" aria-label="Primary navigation">
-      <a class="site-mark" href="#top" aria-label="Yichuan Li, back to top">
-        <span>Yichuan Li</span>
-        <small>Visual journal</small>
+      <a class="site-mark" href="#top" aria-label="{{ site_copy.owner.name | escape }}, back to top">
+        <span>{{ site_copy.owner.name | escape }}</span>
+        <small>{{ site_copy.owner.mark_subtitle | escape }}</small>
       </a>
       <nav class="site-nav" aria-label="Portfolio sections">
-        <a href="#photography">Photography</a>
-        <a href="#painting">Painting <span>Soon</span></a>
+        <a href="#photography">{{ site_copy.navigation.photography | escape }}</a>
+        <a href="#painting">
+          {{- site_copy.navigation.painting | escape -}}
+          {%- if site_copy.sections.painting.coming_soon %} <span>{{ site_copy.navigation.soon | escape }}</span>{% endif -%}
+        </a>
       </nav>
     </header>
 
@@ -25,94 +39,109 @@
       <section class="hero" id="top" aria-labelledby="hero-title">
         <img
           class="hero-image"
-          src="/assets/images/photography/photo-01.jpeg"
-          alt="The Eiffel Tower silhouetted against a deep red sunset over a city skyline"
-          width="1182"
-          height="665"
+          src="{{ featured.image | escape }}"
+          alt="{{ featured.alt | escape }}"
           fetchpriority="high"
         >
         <div class="hero-shade"></div>
         <div class="hero-copy">
-          <p class="eyebrow">Selected works</p>
-          <h1 id="hero-title"><span>Yichuan</span><span>Li</span></h1>
-          <p class="hero-discipline">Photography <i>&amp;</i> Painting</p>
+          <p class="eyebrow">{{ site_copy.hero.eyebrow | escape }}</p>
+          <h1 id="hero-title">
+            <span>{{ site_copy.hero.heading_first | escape }}</span>
+            <span>{{ site_copy.hero.heading_second | escape }}</span>
+          </h1>
+          <p class="hero-discipline">{{ site_copy.hero.discipline | escape | replace: '&amp;', '<i>&amp;</i>' }}</p>
         </div>
         <a class="hero-scroll" href="#photography">
-          <span>View the work</span>
+          <span>{{ site_copy.hero.scroll_label | escape }}</span>
           <span aria-hidden="true">↓</span>
         </a>
       </section>
 
       <section class="photography" id="photography" aria-labelledby="photography-title">
         <div class="section-heading">
-          <p class="eyebrow">01 / Photography</p>
-          <h2 id="photography-title">Light, distance,<br>and quiet moments.</h2>
-          <p class="section-note">Eight photographs from an ongoing visual journal.</p>
+          <p class="eyebrow">{{ site_copy.sections.photography.eyebrow | escape }}</p>
+          <h2 id="photography-title">{{ site_copy.sections.photography.heading | escape }}</h2>
+          <p class="section-note">{{ site_copy.sections.photography.note | escape }}</p>
         </div>
 
-        <div class="gallery" aria-label="Photography works">
-          <button class="gallery-item gallery-item--wide" type="button" aria-label="Open photograph 1 in full screen" data-full="/assets/images/photography/photo-01.jpeg" data-alt="The Eiffel Tower silhouetted against a deep red sunset over a city skyline">
-            <span class="work-number" aria-hidden="true">01</span>
-            <img class="gallery-image" src="/assets/images/photography/photo-01.jpeg" alt="The Eiffel Tower silhouetted against a deep red sunset over a city skyline" width="1182" height="665">
-          </button>
-
-          <button class="gallery-item gallery-item--portrait-small" type="button" aria-label="Open photograph 2 in full screen" data-full="/assets/images/photography/photo-02.jpeg" data-alt="An illuminated glass pyramid against the night sky">
-            <span class="work-number" aria-hidden="true">02</span>
-            <img class="gallery-image" src="/assets/images/photography/photo-02.jpeg" alt="An illuminated glass pyramid against the night sky" width="768" height="1024" loading="lazy">
-          </button>
-
-          <button class="gallery-item gallery-item--portrait-left" type="button" aria-label="Open photograph 3 in full screen" data-full="/assets/images/photography/photo-03.jpeg" data-alt="A restaurant table set with a plated meal and silver cutlery">
-            <span class="work-number" aria-hidden="true">03</span>
-            <img class="gallery-image" src="/assets/images/photography/photo-03.jpeg" alt="A restaurant table set with a plated meal and silver cutlery" width="768" height="1024" loading="lazy">
-          </button>
-
-          <button class="gallery-item gallery-item--portrait-right" type="button" aria-label="Open photograph 4 in full screen" data-full="/assets/images/photography/photo-04.jpeg" data-alt="A lone gull resting on a beach with a softly blurred sea behind it">
-            <span class="work-number" aria-hidden="true">04</span>
-            <img class="gallery-image" src="/assets/images/photography/photo-04.jpeg" alt="A lone gull resting on a beach with a softly blurred sea behind it" width="1440" height="1800" loading="lazy">
-          </button>
-
-          <button class="gallery-item gallery-item--landscape" type="button" aria-label="Open photograph 5 in full screen" data-full="/assets/images/photography/photo-05.jpeg" data-alt="A skeletal seaside pier beneath layered clouds">
-            <span class="work-number" aria-hidden="true">05</span>
-            <img class="gallery-image" src="/assets/images/photography/photo-05.jpeg" alt="A skeletal seaside pier beneath layered clouds" width="794" height="990" loading="lazy">
-          </button>
-
-          <button class="gallery-item gallery-item--tower" type="button" aria-label="Open photograph 6 in full screen" data-full="/assets/images/photography/photo-06.jpeg" data-alt="A dark stone tower rising into a pale open sky">
-            <span class="work-number" aria-hidden="true">06</span>
-            <img class="gallery-image" src="/assets/images/photography/photo-06.jpeg" alt="A dark stone tower rising into a pale open sky" width="1440" height="1800" loading="lazy">
-          </button>
-
-          <button class="gallery-item gallery-item--rooftop" type="button" aria-label="Open photograph 7 in full screen" data-full="/assets/images/photography/photo-07.jpeg" data-alt="Seabirds crossing a blue sky above pale coastal rooftops">
-            <span class="work-number" aria-hidden="true">07</span>
-            <img class="gallery-image" src="/assets/images/photography/photo-07.jpeg" alt="Seabirds crossing a blue sky above pale coastal rooftops" width="1440" height="1799" loading="lazy">
-          </button>
-
-          <button class="gallery-item gallery-item--horizon" type="button" aria-label="Open photograph 8 in full screen" data-full="/assets/images/photography/photo-08.jpeg" data-alt="A line of birds flying over a dark sea beneath a vast cloudy sky">
-            <span class="work-number" aria-hidden="true">08</span>
-            <img class="gallery-image" src="/assets/images/photography/photo-08.jpeg" alt="A line of birds flying over a dark sea beneath a vast cloudy sky" width="794" height="990" loading="lazy">
-          </button>
+        <div class="gallery" data-category="photography" aria-label="Photography works">
+          {% for work in photography %}
+            <button
+              class="gallery-item"
+              type="button"
+              aria-label="Open {{ work.title | escape }} in full screen"
+              data-full="{{ work.image | escape }}"
+              data-alt="{{ work.alt | escape }}"
+              data-title="{{ work.title | escape }}"
+              data-category="{{ work.category | escape }}"
+            >
+              <span class="work-number" aria-hidden="true">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</span>
+              <img
+                class="gallery-image"
+                src="{{ work.image | escape }}"
+                alt="{{ work.alt | escape }}"
+                {% unless forloop.first %}loading="lazy"{% endunless %}
+              >
+            </button>
+          {% endfor %}
         </div>
       </section>
 
-      <section class="painting" id="painting" aria-labelledby="painting-title">
-        <div class="painting-orbit" aria-hidden="true">
-          <span>Painting · Coming soon · Painting · Coming soon ·</span>
-        </div>
-        <div class="painting-copy">
-          <p class="eyebrow">02 / Painting</p>
-          <h2 id="painting-title">The next<br>collection.</h2>
-          <p>Paintings will join the archive soon.</p>
-        </div>
-      </section>
+      {% if site_copy.sections.painting.coming_soon %}
+        <section class="painting painting-holding" id="painting" aria-labelledby="painting-title">
+          <div class="painting-orbit" aria-hidden="true">
+            <span>{{ site_copy.sections.painting.orbit_text | escape }}</span>
+          </div>
+          <div class="painting-copy">
+            <p class="eyebrow">{{ site_copy.sections.painting.eyebrow | escape }}</p>
+            <h2 id="painting-title">{{ site_copy.sections.painting.heading | escape }}</h2>
+            <p>{{ site_copy.sections.painting.note | escape }}</p>
+          </div>
+        </section>
+      {% else %}
+        <section class="photography painting-collection" id="painting" aria-labelledby="painting-title">
+          <div class="section-heading">
+            <p class="eyebrow">{{ site_copy.sections.painting.eyebrow | escape }}</p>
+            <h2 id="painting-title">{{ site_copy.sections.painting.heading | escape }}</h2>
+            <p class="section-note">{{ site_copy.sections.painting.note | escape }}</p>
+          </div>
+          <div class="gallery" data-category="painting" aria-label="Painting works">
+            {% for work in paintings %}
+              <button
+                class="gallery-item"
+                type="button"
+                aria-label="Open {{ work.title | escape }} in full screen"
+                data-full="{{ work.image | escape }}"
+                data-alt="{{ work.alt | escape }}"
+                data-title="{{ work.title | escape }}"
+                data-category="{{ work.category | escape }}"
+              >
+                <span class="work-number" aria-hidden="true">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</span>
+                <img class="gallery-image" src="{{ work.image | escape }}" alt="{{ work.alt | escape }}" loading="lazy">
+              </button>
+            {% endfor %}
+          </div>
+        </section>
+      {% endif %}
     </main>
 
     <footer class="site-footer">
-      <p>Yichuan Li</p>
-      <p>Photography &amp; Painting</p>
-      <a href="#top">Back to top ↑</a>
+      <p>{{ site_copy.footer.signature | escape }}</p>
+      <p>{{ site_copy.footer.discipline | escape }}</p>
+      <a href="#top">{{ site_copy.footer.back_to_top | escape }}</a>
+      {% if site_copy.contact.email != empty %}
+        <a class="footer-contact" href="mailto:{{ site_copy.contact.email | escape }}">{{ site_copy.contact.email | escape }}</a>
+      {% endif %}
+      {% for profile in site_copy.contact.social %}
+        {% if profile.label != empty and profile.url != empty %}
+          <a class="footer-contact" href="{{ profile.url | escape }}" rel="me">{{ profile.label | escape }}</a>
+        {% endif %}
+      {% endfor %}
     </footer>
 
-    <dialog class="lightbox" id="gallery-lightbox" aria-label="Enlarged photograph">
-      <button class="lightbox-close" type="button" aria-label="Close enlarged photograph">Close ×</button>
+    <dialog class="lightbox" id="gallery-lightbox" aria-label="Enlarged artwork">
+      <button class="lightbox-close" type="button" aria-label="Close enlarged artwork">Close ×</button>
       <img class="lightbox-image" src="" alt="">
       <p class="lightbox-count" aria-live="polite"></p>
     </dialog>
