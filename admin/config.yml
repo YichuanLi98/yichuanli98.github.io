@@ -10,6 +10,9 @@ show_preview_links: true
 
 media_folder: assets/images/works
 public_folder: /assets/images/works
+media_processing:
+  enabled: true
+  strip_metadata: true
 
 slug:
   encoding: ascii

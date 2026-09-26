@@ -14,6 +14,103 @@ from html.parser import HTMLParser
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+SUPPORTED_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
+
+
+def load_gallery_contract(source_dir):
+    ruby = r'''
+require "date"
+require "json"
+require "yaml"
+
+root = ARGV.fetch(0)
+site = YAML.safe_load(
+  File.read(File.join(root, "_data", "site.yml")),
+  permitted_classes: [Date],
+  aliases: true
+)
+works = Dir.glob(File.join(root, "_works", "*.md")).sort.map do |path|
+  text = File.read(path)
+  front_matter = text.match(/\A---\s*\n(.*?)\n---\s*(?:\n|\z)/m)[1]
+  data = YAML.safe_load(
+    front_matter,
+    permitted_classes: [Date],
+    aliases: true
+  ) || {}
+  {
+    "slug" => File.basename(path, File.extname(path)),
+    "title" => data["title"],
+    "category" => data["category"],
+    "image" => data["image"],
+    "visible" => data["visible"]
+  }
+end
+
+print JSON.generate({
+  "order" => site.dig("sections", "photography", "work_order"),
+  "works" => works
+})
+'''
+    result = subprocess.run(
+        ["ruby", "-e", ruby, str(source_dir)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    data = json.loads(result.stdout)
+    photographs = {
+        work["slug"]: work
+        for work in data["works"]
+        if work["category"] == "photography" and work["visible"] is True
+    }
+    ordered = [
+        photographs[slug]
+        for slug in data["order"]
+        if slug in photographs
+    ]
+    ordered_slugs = {work["slug"] for work in ordered}
+    fallback = sorted(
+        (
+            work
+            for slug, work in photographs.items()
+            if slug not in ordered_slugs
+        ),
+        key=lambda work: work["title"],
+    )
+    return ordered + fallback
+
+
+def update_site_fixture(source_dir, *, featured_work, photography_order):
+    ruby = r'''
+require "date"
+require "json"
+require "yaml"
+
+path = ARGV.fetch(0)
+data = YAML.safe_load(
+  File.read(path),
+  permitted_classes: [Date],
+  aliases: true
+)
+data["seo"]["title"] = "Fixture Portfolio — Rendered from YAML"
+data["seo"]["description"] = "Fixture description rendered from structured content."
+data["hero"]["featured_work"] = ARGV.fetch(1)
+data["sections"]["photography"]["work_order"] = JSON.parse(ARGV.fetch(2))
+File.write(path, YAML.dump(data))
+'''
+    subprocess.run(
+        [
+            "ruby",
+            "-e",
+            ruby,
+            str(source_dir / "_data" / "site.yml"),
+            featured_work,
+            json.dumps(photography_order),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 class GalleryParser(HTMLParser):
@@ -91,38 +188,13 @@ class GallerySiteTest(unittest.TestCase):
             ignore=ignore_local_build_artifacts,
         )
 
-        site_data = cls.source_dir / "_data/site.yml"
-        site_text = site_data.read_text(encoding="utf-8")
-        site_text = site_text.replace(
-            'title: "Yichuan Li — Photography & Painting"',
-            'title: "Fixture Portfolio — Rendered from YAML"',
-        ).replace(
-            'description: "Photography and painting by Yichuan Li."',
-            'description: "Fixture description rendered from structured content."',
-        ).replace(
-            'featured_work: "01-paris-sunset"',
-            'featured_work: "02-louvre-night"',
-        ).replace(
-            '''    work_order:
-      - "01-paris-sunset"
-      - "02-louvre-night"
-      - "03-vaudeville-table"
-      - "04-gull-by-sea"
-      - "05-west-pier"
-      - "06-bell-tower"
-      - "07-coastal-rooftops"
-      - "08-birds-over-sea"''',
-            '''    work_order:
-      - "08-birds-over-sea"
-      - "02-louvre-night"
-      - "03-vaudeville-table"
-      - "04-gull-by-sea"
-      - "05-west-pier"
-      - "06-bell-tower"
-      - "07-coastal-rooftops"
-      - "01-paris-sunset"''',
+        initial_photography = load_gallery_contract(cls.source_dir)
+        fixture_order = [work["slug"] for work in reversed(initial_photography)]
+        update_site_fixture(
+            cls.source_dir,
+            featured_work=fixture_order[0],
+            photography_order=fixture_order,
         )
-        site_data.write_text(site_text, encoding="utf-8")
 
         (cls.source_dir / "_works/99-hidden.md").write_text(
             """---
@@ -150,6 +222,8 @@ visible: true
 """,
             encoding="utf-8",
         )
+
+        cls.expected_photography = load_gallery_contract(cls.source_dir)
 
         build = subprocess.run(
             [
@@ -200,12 +274,15 @@ visible: true
             parser.meta_description,
             "Fixture description rendered from structured content.",
         )
-        self.assertEqual(len(parser.images), 8)
-        self.assertEqual(len(parser.lightbox_buttons), 8)
+        self.assertEqual(len(parser.images), len(self.expected_photography))
+        self.assertEqual(len(parser.lightbox_buttons), len(self.expected_photography))
         self.assertIn("photography", parser.ids)
         self.assertIn("painting", parser.ids)
         self.assertIn("gallery-lightbox", parser.ids)
-        self.assertEqual(parser.hero_image["src"], "/assets/images/works/photo-02.jpeg")
+        self.assertEqual(
+            parser.hero_image["src"],
+            self.expected_photography[0]["image"],
+        )
         self.assertTrue(parser.painting_holding)
         self.assertEqual(
             [gallery.get("data-category") for gallery in parser.galleries],
@@ -215,16 +292,7 @@ visible: true
 
         self.assertEqual(
             [button["data-full"] for button in parser.lightbox_buttons],
-            [
-                "/assets/images/works/photo-08.jpeg",
-                "/assets/images/works/photo-02.jpeg",
-                "/assets/images/works/photo-03.jpeg",
-                "/assets/images/works/photo-04.jpeg",
-                "/assets/images/works/photo-05.jpeg",
-                "/assets/images/works/photo-06.jpeg",
-                "/assets/images/works/photo-07.jpeg",
-                "/assets/images/works/photo-01.jpeg",
-            ],
+            [work["image"] for work in self.expected_photography],
         )
 
         for image in parser.images:
@@ -234,21 +302,25 @@ visible: true
         for button in parser.lightbox_buttons:
             self.assertTrue(button.get("aria-label", "").strip())
 
-    def test_every_gallery_image_is_served_as_jpeg(self):
+    def test_every_gallery_image_is_served_as_an_image(self):
         _, _, body = self.fetch("/")
         parser = GalleryParser()
         parser.feed(body.decode("utf-8"))
 
-        self.assertEqual(len(parser.images), 8)
+        self.assertEqual(len(parser.images), len(self.expected_photography))
         for image in parser.images:
             status, headers, image_body = self.fetch(image["src"])
             self.assertEqual(status, 200)
-            self.assertEqual(headers.get_content_type(), "image/jpeg")
+            self.assertTrue(headers.get_content_type().startswith("image/"))
             self.assertGreater(len(image_body), 10_000)
 
     def test_public_photographs_do_not_expose_exif_metadata(self):
-        image_paths = sorted((REPO_ROOT / "assets/images/works").glob("*.jpeg"))
-        self.assertEqual(len(image_paths), 8)
+        image_paths = sorted(
+            path
+            for path in (REPO_ROOT / "assets/images/works").iterdir()
+            if path.suffix.lower() in SUPPORTED_IMAGE_SUFFIXES
+        )
+        self.assertGreater(len(image_paths), 0)
 
         for image_path in image_paths:
             with self.subTest(image=image_path.name):

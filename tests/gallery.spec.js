@@ -14,7 +14,10 @@ function startStaticServer(root) {
     ".css": "text/css",
     ".html": "text/html; charset=utf-8",
     ".jpeg": "image/jpeg",
+    ".jpg": "image/jpeg",
     ".js": "text/javascript",
+    ".png": "image/png",
+    ".webp": "image/webp",
   };
   const server = http.createServer((request, response) => {
     const requestUrl = new URL(request.url, "http://127.0.0.1");
@@ -50,17 +53,22 @@ function startStaticServer(root) {
 test("desktop gallery opens, counts, closes, and restores focus", async ({ page }) => {
   await page.goto("/");
   const items = page.locator(".gallery-item");
-  await expect(items).toHaveCount(8);
+  const itemCount = await items.count();
+  expect(itemCount).toBeGreaterThan(0);
 
   const selected = items.nth(2);
+  const selectedImage = await selected.getAttribute("data-full");
+  const selectedIndex = (await selected.locator(".work-number").innerText()).trim();
   await selected.click();
   const dialog = page.locator("#gallery-lightbox");
   await expect(dialog).toBeVisible();
   await expect(dialog.locator(".lightbox-image")).toHaveAttribute(
     "src",
-    "/assets/images/works/photo-03.jpeg",
+    selectedImage,
   );
-  await expect(dialog.locator(".lightbox-count")).toHaveText("03 / 08");
+  await expect(dialog.locator(".lightbox-count")).toHaveText(
+    `${selectedIndex} / ${String(itemCount).padStart(2, "0")}`,
+  );
 
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
@@ -71,7 +79,9 @@ test("desktop gallery opens, counts, closes, and restores focus", async ({ page 
 test("mobile layout has no horizontal overflow and every image loads", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.locator(".gallery-item")).toHaveCount(8);
+  const itemCount = await page.locator(".gallery-item").count();
+  expect(itemCount).toBeGreaterThan(0);
+  await expect(page.locator(".gallery-image")).toHaveCount(itemCount);
   await expect.poll(
     () => page.locator(".gallery-image").evaluateAll((images) => images.every((image) => image.complete && image.naturalWidth > 0)),
   ).toBe(true);
@@ -95,7 +105,9 @@ test("reduced motion disables smooth scrolling and long transitions", async ({ p
 });
 
 
-test("a ninth work remains reachable and uses the correct lightbox count", async ({ page }) => {
+test("an additional work remains reachable and updates the lightbox count", async ({ page }) => {
+  await page.goto("/");
+  const baselineCount = await page.locator(".gallery-item").count();
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "portfolio-nine-"));
   const source = path.join(temporaryRoot, "source");
   const destination = path.join(temporaryRoot, "site");
@@ -147,9 +159,14 @@ visible: true
     await page.goto(fixture.url);
 
     const items = page.locator(".gallery-item");
-    await expect(items).toHaveCount(9);
-    await items.last().click();
-    await expect(page.locator(".lightbox-count")).toHaveText("09 / 09");
+    const expectedCount = baselineCount + 1;
+    await expect(items).toHaveCount(expectedCount);
+    const fixtureItem = page.locator('[data-title="Browser Fixture"]');
+    const fixtureIndex = (await fixtureItem.locator(".work-number").innerText()).trim();
+    await fixtureItem.click();
+    await expect(page.locator(".lightbox-count")).toHaveText(
+      `${fixtureIndex} / ${String(expectedCount).padStart(2, "0")}`,
+    );
   } finally {
     if (server) {
       await new Promise((resolve) => server.close(resolve));
