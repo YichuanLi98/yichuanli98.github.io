@@ -22,3 +22,6 @@ test-results/
 
 # Ignore local Git worktrees used for isolated feature development
 .worktrees/
+
+# Ignore local Netlify project state
+.netlify/
