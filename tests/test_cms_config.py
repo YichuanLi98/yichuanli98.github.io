@@ -1,6 +1,7 @@
 import json
 import os
 import pathlib
+import re
 import subprocess
 import textwrap
 import unittest
@@ -202,13 +203,27 @@ class AutomationContractTest(unittest.TestCase):
 
     def test_netlify_builds_the_strict_jekyll_site(self):
         config = (REPO_ROOT / "netlify.toml").read_text(encoding="utf-8")
+        production_command = re.search(
+            r'(?ms)^\[build\]\s+command = "(.+?)"$', config
+        ).group(1)
+        preview_command = re.search(
+            r'(?ms)^\[context\.deploy-preview\]\s+command = "(.+?)"$', config
+        ).group(1)
         command = (
             'command = "python3 scripts/sanitize_media.py --write assets/images/works '
             "&& ruby scripts/validate_content.rb --site _data/site.yml --works _works "
             '&& bundle exec jekyll build --strict_front_matter"'
         )
         self.assertIn(command, config)
-        self.assertEqual(config.count(command), 2)
+        self.assertNotIn(
+            "scripts/configure_cms_branch.py",
+            production_command,
+        )
+        self.assertIn(
+            "python3 scripts/configure_cms_branch.py --config _site/admin/config.yml --branch ",
+            preview_command,
+        )
+        self.assertIn("$HEAD", preview_command)
         self.assertIn('publish = "_site"', config)
         self.assertIn('JEKYLL_ENV = "production"', config)
         self.assertIn('for = "/*"', config)

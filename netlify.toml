@@ -7,7 +7,7 @@
   RUBY_VERSION = "3.2.11"
 
 [context.deploy-preview]
-  command = "python3 scripts/sanitize_media.py --write assets/images/works && ruby scripts/validate_content.rb --site _data/site.yml --works _works && bundle exec jekyll build --strict_front_matter"
+  command = "python3 scripts/sanitize_media.py --write assets/images/works && ruby scripts/validate_content.rb --site _data/site.yml --works _works && bundle exec jekyll build --strict_front_matter && python3 scripts/configure_cms_branch.py --config _site/admin/config.yml --branch \"$HEAD\""
 
 [[headers]]
   for = "/*"
