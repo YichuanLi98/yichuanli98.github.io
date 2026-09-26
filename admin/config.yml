@@ -1,0 +1,149 @@
+backend:
+  name: git-gateway
+  branch: master
+
+publish_mode: editorial_workflow
+locale: zh_Hans
+site_url: https://yichuanli98.github.io
+display_url: https://yichuanli98.github.io
+show_preview_links: true
+
+media_folder: assets/images/works
+public_folder: /assets/images/works
+
+slug:
+  encoding: ascii
+  clean_accents: true
+  sanitize_replacement: "-"
+
+collections:
+  - name: site_settings
+    label: 站点设置
+    delete: false
+    editor:
+      preview: true
+    files:
+      - name: site
+        label: 全站内容
+        file: _data/site.yml
+        fields:
+          - name: owner
+            label: 个人信息
+            widget: object
+            fields:
+              - { name: name, label: 姓名, widget: string }
+              - { name: mark_subtitle, label: 标记副标题, widget: string }
+          - name: seo
+            label: 搜索与分享
+            widget: object
+            fields:
+              - { name: title, label: 页面标题, widget: string }
+              - { name: description, label: 页面描述, widget: text }
+          - name: navigation
+            label: 导航
+            widget: object
+            fields:
+              - { name: photography, label: 摄影标签, widget: string }
+              - { name: painting, label: 绘画标签, widget: string }
+              - { name: soon, label: 即将上线标签, widget: string }
+          - name: hero
+            label: 首屏
+            widget: object
+            fields:
+              - { name: eyebrow, label: 小标题, widget: string }
+              - { name: heading_first, label: 主标题第一行, widget: string }
+              - { name: heading_second, label: 主标题第二行, widget: string }
+              - { name: discipline, label: 创作类型, widget: string }
+              - { name: scroll_label, label: 向下引导文字, widget: string }
+          - name: sections
+            label: 作品版块
+            widget: object
+            fields:
+              - name: photography
+                label: 摄影版块
+                widget: object
+                fields:
+                  - { name: eyebrow, label: 小标题, widget: string }
+                  - { name: heading, label: 主标题, widget: string }
+                  - { name: note, label: 说明, widget: text }
+              - name: painting
+                label: 绘画版块
+                widget: object
+                fields:
+                  - { name: eyebrow, label: 小标题, widget: string }
+                  - { name: heading, label: 主标题, widget: string }
+                  - { name: note, label: 说明, widget: text }
+                  - { name: coming_soon, label: 显示“即将上线”, widget: boolean, default: true }
+                  - { name: orbit_text, label: 环形文字, widget: string }
+          - name: footer
+            label: 页脚
+            widget: object
+            fields:
+              - { name: signature, label: 署名, widget: string }
+              - { name: discipline, label: 创作类型, widget: string }
+              - { name: back_to_top, label: 返回顶部文字, widget: string }
+          - name: contact
+            label: 联系方式
+            widget: object
+            fields:
+              - { name: email, label: 邮箱, widget: string, required: false }
+              - name: social
+                label: 社交链接
+                widget: list
+                required: false
+                summary: "{{fields.label}}"
+                fields:
+                  - { name: label, label: 名称, widget: string }
+                  - { name: url, label: 链接, widget: string }
+
+  - name: photography
+    label: 摄影作品
+    label_singular: 摄影作品
+    folder: _works
+    create: true
+    delete: true
+    format: frontmatter
+    extension: md
+    identifier_field: title
+    summary: "{{fields.order}} · {{fields.title}}"
+    slug: "{{fields.order}}-{{slug}}"
+    filter: { field: category, value: photography }
+    editor:
+      preview: true
+    fields: &work_fields_photography
+      - { name: title, label: 作品名称, widget: string }
+      - { name: category, label: 类别, widget: hidden, default: photography }
+      - { name: image, label: 图片, widget: image, choose_url: false }
+      - { name: alt, label: 图片替代文字, widget: text, hint: 为无法看到图片的访客简洁描述画面。 }
+      - { name: description, label: 作品说明, widget: text, required: false }
+      - { name: location, label: 地点, widget: string, required: false }
+      - { name: date, label: 日期, widget: datetime, required: false, format: "YYYY-MM-DD", date_format: "YYYY-MM-DD", time_format: false }
+      - { name: order, label: 排序, widget: number, value_type: int, min: 1 }
+      - { name: featured, label: 设为首屏作品, widget: boolean, default: false }
+      - { name: visible, label: 在网站显示, widget: boolean, default: true }
+
+  - name: painting
+    label: 绘画作品
+    label_singular: 绘画作品
+    folder: _works
+    create: true
+    delete: true
+    format: frontmatter
+    extension: md
+    identifier_field: title
+    summary: "{{fields.order}} · {{fields.title}}"
+    slug: "{{fields.order}}-{{slug}}"
+    filter: { field: category, value: painting }
+    editor:
+      preview: true
+    fields:
+      - { name: title, label: 作品名称, widget: string }
+      - { name: category, label: 类别, widget: hidden, default: painting }
+      - { name: image, label: 图片, widget: image, choose_url: false }
+      - { name: alt, label: 图片替代文字, widget: text, hint: 为无法看到图片的访客简洁描述画面。 }
+      - { name: description, label: 作品说明, widget: text, required: false }
+      - { name: location, label: 地点, widget: string, required: false }
+      - { name: date, label: 日期, widget: datetime, required: false, format: "YYYY-MM-DD", date_format: "YYYY-MM-DD", time_format: false }
+      - { name: order, label: 排序, widget: number, value_type: int, min: 1 }
+      - { name: featured, label: 设为首屏作品, widget: boolean, default: false }
+      - { name: visible, label: 在网站显示, widget: boolean, default: true }
